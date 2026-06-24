@@ -1,0 +1,115 @@
+/**
+ * src/features/project/pages/ProjectPage.jsx
+ *
+ * Uses goTo(key, params) — no hardcoded navigate('/projects/...') calls.
+ * Works for both standalone /projects view and repo-scoped /repository/:repoId/p view.
+ */
+
+import { useParams } from "react-router-dom";
+import { ListProvider } from "../../../packages/ui-List/components/ListProvider";
+import { ListLayout } from "../../../packages/ui-List/components/ListLayout";
+import { ProjUIConfig } from "../config/ProjectUI.config";
+import { useMasterData } from "../../../core/master/masterCall/useMasterData";
+import { useProjectData } from "../hooks/useProjectData";
+import { useSmartNavigation } from "../../../core/navigation/useSmartNavigation";
+import { ROUTE_KEYS } from "../../../core/routing/paths";
+import { readUserFromSession, useCurrentUser } from "../../../core/auth/useCurrentUser";
+import { useEmployeeOptions, useRepoOptions } from "../../../core/master/selectors/selectors";
+
+const ProjectPage = () => {
+  const { repoId } = useParams();
+  const { data } = useMasterData();
+  const { data: projects } = useProjectData(repoId);
+  const { goTo } = useSmartNavigation();
+  const user = readUserFromSession();
+  const {isViewer} = useCurrentUser();
+  const allowedUsers = ["bharanidharan", "dinesh", "poovannan"];
+  const userName = user?.name?.toLowerCase() || "";
+  const employeeFilterOptions = useEmployeeOptions(true);
+  const repoFilterOptions = useRepoOptions(true);
+  const scopedProjects = Array.isArray(projects)
+    ? projects
+    : Array.isArray(projects?.ProjectList?.Data)
+      ? projects.ProjectList.Data
+      : [];
+
+  const rawList = repoId ? scopedProjects : data?.ProjectList;
+  const editRouteKey = repoId
+    ? ROUTE_KEYS.REPO_PROJ_EDIT
+    : ROUTE_KEYS.PROJ_EDIT;
+
+  const normalizeProj = (proj) => ({
+    id: proj.Id,
+    title: proj.Project_Name,
+    key: proj.ProjectKey,
+    status: proj.Status,
+    owner: proj.EmployeeName,
+    createdAt: proj.CreatedAt,
+    CreatedBy: proj.CreatedBy,
+    repoId: proj.Repo_Id,
+    repoName: proj.Repo_Name,
+    repoKey: proj.RepoKey,
+    UpdatedAt: proj.UpdatedAt,
+    UpdatedBy: proj.UpdatedBy,
+  });
+  const repos = rawList?.map(normalizeProj) || [];
+
+  // Determine create route key based on context (inside repo vs standalone)
+  const createRouteKey = repoId
+    ? ROUTE_KEYS.REPO_PROJ_CREATE
+    : ROUTE_KEYS.PROJ_CREATE;
+
+  // const detailRouteKey = repoId
+  //   ? ROUTE_KEYS.REPO_PROJ_LIST // no individual proj detail from repo context yet
+  //   : ROUTE_KEYS.PROJ_DETAIL;
+
+  const listConfigWithNav = {
+    ...ProjUIConfig ,
+    enableEdit:isViewer ? false: true
+,    filters: [
+      ...(!repoId
+        ? [{ key: "repoId", view: "Repo", options: repoFilterOptions, allowedRoles:[1,2] }]
+        : []),
+      { key: "owner", view: "Emp", options: employeeFilterOptions, allowedRoles:[1,2] },
+    ],
+    onSelectionChange: (item, isChecked) => {
+      console.log(
+        `Item ${item.id} is now ${isChecked ? "selected" : "unselected"}`,
+      );
+    },
+    onEditClick: (item) => {
+      goTo(editRouteKey, { projId: item.id });
+    },
+    onItemClick: (item) => {
+      goTo(ROUTE_KEYS.PROJ_DETAIL, {
+        projId: item.id,
+      });
+    },
+  };
+
+  return (
+    <>
+      {!repoId && (
+        <div className="flex justify-between items-center mb-3 flex-none">
+          <h2>Projects</h2>
+          {allowedUsers.includes(userName) && (
+            <button
+              onClick={() => goTo(createRouteKey)}
+              className="bg-brand-yellow text-white px-4 py-2 rounded-md font-medium hover:bg-yellow-500 transition-colors"
+            >
+              Create New Project
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0">
+        <ListProvider config={listConfigWithNav} data={repos}>
+          <ListLayout />
+        </ListProvider>
+      </div>
+    </>
+  );
+};
+
+export default ProjectPage;

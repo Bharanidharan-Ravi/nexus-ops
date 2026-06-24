@@ -1,0 +1,259 @@
+﻿using APIGateWay.DomainLayer.CommonSevice;
+using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer.nugetmodal;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
+using System;
+using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using APIGateWay.ModalLayer.GETData;
+using APIGateWay.DomainLayer.Utilities;
+
+namespace APIGateWay.DomainLayer.Service
+{
+    public class SyncExecutionService : ISyncExecutionService
+
+    {
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly HttpClient _httpClient;
+        private readonly APIGateWayCommonService _Service;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILoginContextService _loginContext;
+        private readonly GenerateHelper _generateHelper;
+
+        public SyncExecutionService(
+            HttpClient httpClient,
+            APIGateWayCommonService commonService,
+            IHttpContextAccessor httpContextAccessor,
+            ILoginContextService loginContext,
+            IServiceScopeFactory serviceScopeFactory,
+            GenerateHelper generateHelper
+        )
+        {
+            _httpClient = httpClient;
+            _Service = commonService;
+            _httpContextAccessor = httpContextAccessor;
+            _loginContext = loginContext;
+            _scopeFactory = serviceScopeFactory;
+            _generateHelper = generateHelper;
+        }
+
+        public async Task<RawSyncResult> ExecuteRemoteAsync(
+            string endpoint,
+            DateTimeOffset? lastSync,
+            Dictionary<string, string> parameters,
+            string source)
+        {
+            try
+            {
+                var query = BuildQuery(lastSync, parameters);
+                var request = new HttpRequestMessage(HttpMethod.Get, $"{endpoint}{query}");
+
+                var token = _httpContextAccessor.HttpContext?
+                    .Request.Headers["WG_token"].FirstOrDefault();
+
+                if (!string.IsNullOrEmpty(token))
+                    request.Headers.Add("WG_token", token);
+
+                var response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new RawSyncResult
+                    {
+                        Ok = false,
+                        ErrorCode = $"HTTP_{(int)response.StatusCode}",
+                        ErrorMessage = response.ReasonPhrase,
+                        Retryable = (int)response.StatusCode >= 500,
+                        Source = source
+                    };
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                object data;
+
+                if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("data", out var dataProp))
+                {
+                    data = dataProp.Clone();
+                }
+                else if (root.ValueKind == JsonValueKind.Array || root.ValueKind == JsonValueKind.Object)
+                {
+                    data = root.Clone();
+                }
+                else
+                {
+                    return new RawSyncResult
+                    {
+                        Ok = false,
+                        ErrorCode = "INVALID_REMOTE_RESPONSE",
+                        ErrorMessage = "Invalid server response.",
+                        Retryable = false,
+                        Source = source
+                    };
+                }
+
+                return new RawSyncResult
+                {
+                    Ok = true,
+                    Data = data
+                };
+            }
+            catch (JsonException ex)
+            {
+                return new RawSyncResult
+                {
+                    Ok = false,
+                    ErrorCode = "REMOTE_JSON_ERROR",
+                    ErrorMessage = "Data format error.",
+                    Retryable = false,
+                    Source = source
+                };
+            }
+            catch (Exception ex)
+            {
+                return new RawSyncResult
+                {
+                    Ok = false,
+                    ErrorCode = "REMOTE_EXECUTION_ERROR",
+                    ErrorMessage = "Network error. Check connection.",
+                    Retryable = true,
+                    Source = source
+                };
+            }
+        }
+
+        public async Task<RawSyncResult> ExecuteLocalAsync<T>(
+            string databaseName,
+            string storedProcedure,
+            DateTimeOffset? lastSync,
+            Dictionary<string, string> parameters,
+            string source)
+            where T : class
+        {
+            try
+            {
+                var dbName = _loginContext.databaseName;
+
+                var sqlParams = new List<SqlParameter>
+                {
+                    new SqlParameter("@DbName", dbName ?? (object)DBNull.Value)
+                };
+
+                if (parameters != null)
+                {
+                    foreach (var kv in parameters)
+                    {
+                        if (!sqlParams.Any(p => p.ParameterName == $"@{kv.Key}"))
+                        {
+                            sqlParams.Add(
+                                new SqlParameter($"@{kv.Key}", kv.Value ?? (object)DBNull.Value)
+                            );
+                        }
+                    }
+                }
+
+                var data = await _Service.ExecuteGetItemAsyc<T>(
+                    storedProcedure,
+                    sqlParams.ToArray()
+                );
+
+                if (data != null && typeof(T) == typeof(GetEmployee))
+                {
+                    var employees = data as List<GetEmployee>;
+                    if (employees is not null)
+                    {
+                        foreach (var emp in employees)
+                        {
+                            if (!string.IsNullOrWhiteSpace(emp.Attachment_JSON))
+                            {
+                                try
+                                {
+                                    using var doc = JsonDocument.Parse(emp.Attachment_JSON);
+                                    var root = doc.RootElement;
+
+                                    if (root.ValueKind == JsonValueKind.Array)
+                                    {
+                                        var first = root.EnumerateArray().FirstOrDefault();
+
+                                        if (first.ValueKind == JsonValueKind.Object &&
+                                            first.TryGetProperty("relativepath", out var relPathEl) &&
+                                            relPathEl.ValueKind == JsonValueKind.String)
+                                        {
+                                            var relativePath = relPathEl.GetString();
+
+                                            if (!string.IsNullOrEmpty(relativePath))
+                                            {
+                                                var encodedRelativePath = string.Join("/", relativePath
+                                                    .Replace("\\", "/")
+                                                    .Split('/')
+                                                    .Select(segment => Uri.EscapeDataString(segment))
+                                                );
+
+                                                emp.PreviewUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (JsonException)
+                                {
+                                    emp.PreviewUrl = null;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return new RawSyncResult
+                {
+                    Ok = true,
+                    Data = data
+                };
+            }
+            catch (SqlException ex)
+            {
+                return new RawSyncResult
+                {
+                    Ok = false,
+                    ErrorCode = "Database error. Try again.",
+                    ErrorMessage = ex.Message,
+                    Retryable = true,
+                    Source = source
+                };
+            }
+            catch (Exception ex)
+            {
+                return new RawSyncResult
+                {
+                    Ok = false,
+                    ErrorCode = "System error. Contact admin.",
+                    ErrorMessage = ex.Message,
+                    Retryable = false,
+                    Source = source
+                };
+            }
+        }
+
+
+        private static string BuildQuery(
+            DateTimeOffset? lastSync,
+            Dictionary<string, string> parameters)
+        {
+            var query = new List<string>();
+
+            if (lastSync.HasValue)
+                query.Add($"since={Uri.EscapeDataString(lastSync.Value.ToString("o"))}");
+
+            if (parameters != null)
+            {
+                foreach (var kv in parameters)
+                    query.Add($"{kv.Key}={Uri.EscapeDataString(kv.Value)}");
+            }
+
+            return query.Count > 0 ? "?" + string.Join("&", query) : string.Empty;
+        }
+    }
+}

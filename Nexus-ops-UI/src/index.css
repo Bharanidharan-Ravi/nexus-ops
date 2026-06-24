@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  text-rendering: optimizeLegibility;
+}
+@layer base {
+
+  /* 1. Global App Background and Text Color */
+  body {
+    font-family: "Inter", sans-serif;
+
+    @apply bg-brand-gray-light text-brand-black antialiased m-0 p-0 min-h-screen;
+
+    @apply text-sm md:text-base;
+  }
+
+  /* 2. Responsive Headings */
+  h1 {
+    @apply text-4xl font-semibold;
+  }
+
+  h2 {
+    @apply text-3xl font-semibold;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+
+  h4 {
+    @apply text-xl font-semibold;
+  }
+
+  h5 {
+    @apply text-lg font-semibold;
+  }
+
+  h6 {
+    @apply text-base font-semibold;
+  }
+
+  h1 {
+    /* 24px mobile, 30px tablet, 36px desktop */
+    @apply text-2xl md:text-3xl lg:text-4xl;
+  }
+
+  h2 {
+    /* 20px mobile, 24px tablet, 30px desktop */
+    @apply text-xl md:text-2xl lg:text-3xl;
+  }
+
+  /* 3. Global Links */
+  a {
+    @apply text-brand-black hover:text-brand-yellow transition-colors duration-200 cursor-pointer;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* TIER 2B: GLOBAL COMPONENTS (Standardized buttons, cards, and inputs)       */
+/* -------------------------------------------------------------------------- */
+@layer components {
+
+  /* Forms & Cards */
+  .wg-form-container {
+    @apply bg-white border border-gray-300 rounded-lg shadow-sm flex flex-col max-h-[calc(100vh-160px)];
+  }
+
+  .wg-form-footer {
+    @apply px-6 py-4 bg-gray-50 border-t border-gray-300 flex justify-end gap-3 rounded-b-lg flex-none;
+  }
+
+  /* Standard Inputs */
+  .wg-input {
+    @apply w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:bg-white focus:border-gray-500 focus:ring-0 transition-colors placeholder-gray-400;
+  }
+
+  /* Global Button Typography & Sizing */
+  .wg-btn {
+    @apply px-4 py-2 text-sm font-semibold rounded-md transition-colors disabled:opacity-50 inline-flex items-center justify-center;
+  }
+
+  /* Specific Button Variations */
+  .wg-btn-primary {
+    @apply wg-btn bg-gray-800 text-white hover:bg-black;
+  }
+
+  .wg-btn-secondary {
+    @apply wg-btn bg-white border border-gray-300 text-gray-700 hover:bg-gray-100;
+  }
+
+  /* 🔥 MUI Specific Input Styling */
+  .wg-mui-input {
+    @apply w-full;
+  }
+
+  /* Resting State */
+  .wg-mui-input .MuiOutlinedInput-root {
+    @apply bg-gray-50 rounded-md transition-all text-sm text-gray-900;
+  }
+
+  .wg-mui-input .MuiOutlinedInput-notchedOutline {
+    @apply border-gray-500;
+  }
+
+  /* Hover State */
+  .wg-mui-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    @apply border-gray-500;
+  }
+
+  /* Focus/Active State */
+  .wg-mui-input .MuiOutlinedInput-root.Mui-focused {
+    @apply bg-white;
+  }
+
+  .wg-mui-input .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+    @apply border-gray-500 border-[1px] ring-0;
+  }
+
+  /* Label Styling */
+  .wg-mui-input .MuiInputLabel-root {
+    @apply text-sm text-gray-800;
+  }
+
+  .wg-mui-input .MuiInputLabel-root.Mui-focused {
+    @apply text-gray-900 border-red-500;
+  }
+
+  /* Custom Scrollbar Utilities */
+  /* Firefox (Note: Firefox only supports 'thin' or 'auto', not hover animations) */
+  .wg-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    /* Tailwind slate-300 */
+  }
+
+  /* 1. Base WebKit Scrollbar (Ultra minimal, 4px wide) */
+  .wg-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+    transition: width 0.2s ease;
+    /* Smooth transition */
+  }
+
+  /* 2. Hide the Up/Down Arrows completely */
+  .wg-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* 3. Transparent Track */
+  .wg-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* 4. The Thumb (The draggable part) */
+  .wg-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    /* Tailwind slate-300 */
+    border-radius: 10px;
+  }
+
+  /* 5. Darken slightly when actively hovering over the thumb itself */
+  .wg-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+    /* Tailwind slate-400 */
+  }
+
+  /* 6. EXPAND ON HOVER: When hovering anywhere in the list container, make it 8px */
+  .wg-scrollbar:hover::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+}

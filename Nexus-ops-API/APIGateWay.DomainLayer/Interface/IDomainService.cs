@@ -1,0 +1,60 @@
+﻿using APIGateWay.ModalLayer.PostData;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq.Expressions;
+
+namespace APIGateWay.DomainLayer.Interface
+{
+    public interface IDomainService
+    {
+        Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> businessLogic);
+        Task SaveEntityWithAttachmentsAsync<TEntity>(TEntity entity, List<AttachmentMaster> attachments) where TEntity : class;
+        Task SaveLabelAsync(List<IssueLabel> labels);
+
+        Task SaveAttachmentsAsync(List<AttachmentMaster> attachments);
+        // ── NEW ───────────────────────────────────────────────────────────────
+        // Used for all update operations — full update and status-only update.
+        // Finds entity by id, calls mutator to apply your changes, saves.
+        // DBContext audit sets UpdatedAt + UpdatedBy automatically.
+        // No sequence call — keys never change on update.
+        Task UpdateTrackedEntityAsync<TEntity>(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> mutator)
+        where TEntity : class;
+        Task<TEntity> UpdateEntityWithAttachmentsAsync<TEntity>(
+            object id,
+            Action<TEntity> mutator,
+            List<AttachmentMaster>? newAttachments = null)
+            where TEntity : class;
+
+       Task<TEntity> UpdateEntityByPredicateWithAttachmentsAsync<TEntity>(
+             Expression<Func<TEntity, bool>> predicate,
+             Action<TEntity> mutator,
+             List<AttachmentMaster>? newAttachments = null) where TEntity : class;
+
+        Task UpdateLabelAsync(Guid id, List<IssueLabel> labels);
+
+        Task<TEntity> UpdateEntityByIntIdAsync<TEntity>(
+        int id,
+        Action<TEntity> mutator)
+        where TEntity : class;
+
+       Task SaveEntitiesAsync<TEntity>(
+       List<TEntity> entities)
+       where TEntity : class;
+        Task UpdateAsync<T>(
+            T entity)
+            where T : class;
+        Task SaveEntityAsync<TEntity>(
+       TEntity entity)
+       where TEntity : class;
+
+        IQueryable<TEntity> Query<TEntity>()
+     where TEntity : class;
+        Task UpdateEntityAsync<TEntity>(
+        TEntity entity)
+        where TEntity : class;
+
+        Task DeleteEntityAsync<TEntity>(TEntity entity) where TEntity : class;
+    }
+}

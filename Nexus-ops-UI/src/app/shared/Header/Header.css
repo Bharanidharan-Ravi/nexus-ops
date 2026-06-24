@@ -1,0 +1,103 @@
+.header {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #fde7b0a8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-logo {
+  height: 60px;
+  padding: 8px;
+}
+
+.avatar-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #ffb300;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.dropdown-menu-custom {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 999;
+  min-width: 150px;
+  display: block;
+  background-color: white;
+}
+
+.logout-btn {
+  width: 100%;
+  background-color: red;
+  color: white;
+  padding: 5px;
+}
+.running-banner {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+
+  background: linear-gradient(to right, #f9f9f9, #ececec);
+  border-bottom: 1px solid #ddd;
+  padding: 6px 0;
+}
+
+.running-banner-content {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+
+  animation-name: ticker;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+
+  will-change: transform;
+}
+
+.running-banner:hover .running-banner-content {
+  animation-play-state: paused;
+}
+
+.running-banner-item {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+
+  margin-right: 50px;
+
+  font-size: 14px;
+}
+
+.running-banner-measure {
+  position: absolute;
+
+  visibility: hidden;
+
+  pointer-events: none;
+
+  white-space: nowrap;
+
+  width: max-content;
+
+  height: 0;
+
+  overflow: hidden;
+
+  display: flex;
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}

@@ -1,0 +1,70 @@
+.html-renderer img {
+    max-width: 100%; 
+    height: auto; 
+    max-height: 200px; 
+    object-fit: contain; 
+  }
+
+.highlight-pill{
+  display: inline-flex;
+  align-items: center;
+  background-color: #f1f3f4;
+  border: 1px solid #dce0e4;
+  border-radius: 6px;
+  padding: 0px 12px;
+  font-size: 10px;
+  color: #3c4043;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+.highlight-pill:hover {
+  background-color: orange;
+}
+
+.highlight-pill .file-icon{
+  margin-right:8px;
+  font-size: 10px;
+}
+
+/* =========================================
+   HTML RENDERER LIST STYLES 
+========================================= */
+
+/* Ordered Lists (Numbers: 1, 2, 3) */
+.html-renderer ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Unordered Lists (Bullets: • ) */
+.html-renderer ul {
+  list-style-type: disc; 
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Nested Unordered Lists (Changes bullet style on indent) */
+.html-renderer ul ul {
+  list-style-type: circle;
+  margin-bottom: 0;
+}
+.html-renderer ul ul ul {
+  list-style-type: square;
+}
+
+/* Nested Ordered Lists */
+.html-renderer ol ol {
+  list-style-type: lower-alpha;
+  margin-bottom: 0;
+}
+
+/* Ensure list items actually display their markers */
+.html-renderer li {
+  display: list-item; /* CRITICAL: Forces Tailwind to show the bullet/number */
+  margin-bottom: 0.25rem;
+}
+
+.html-renderer p {
+  margin-bottom: 0.5rem;
+}
