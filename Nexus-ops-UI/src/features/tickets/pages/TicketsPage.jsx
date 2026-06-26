@@ -1,234 +1,5 @@
-// import { useNavigate, useParams } from "react-router-dom";
-// import React from "react";
-// import { useTicketMaster } from "../hooks/useTicketMaster";
-// import "../css/ViewTickets.css";
-// import { ListProvider } from "../../../packages/ui-List/components/ListProvider";
-// import { ListLayout } from "../../../packages/ui-List/components/ListLayout";
-// import { useMasterData } from "../../../core/master/useMasterData";
-// import { TicketListConfig } from "../config/TicketUI.config";
-// import { ROUTE_KEYS } from "../../../core/routing/paths";
-// import { useSmartNavigation } from "../../../core/navigation/useSmartNavigation";
-// import { useTicketKeyboardNavigation } from "../hooks/useTicketKeyboardNavigation";
-// import ThreadListCard from "../component/ThreadListCard/ThreadListCard";
-// import TicketListCard from "../component/TicketListCard";
-
-// export default function TicketsPage() {
-//   const { repoId, projId } = useParams();
-//   const navigate = useNavigate();
-//   const { data: Master } = useMasterData();
-//   const activeProjectId = projId;
-//   const { goTo } = useSmartNavigation();
-
-//   const { data, isLoading } = useTicketMaster({
-//     repoId: repoId ?? null,
-//     projectId: activeProjectId ?? null,
-//   });
-//   const editRouteKey = projId
-//     ? ROUTE_KEYS.PROJ_TICKET_EDIT
-//     : ROUTE_KEYS.TICKET_EDIT;
-
-//   const createRouteKey = repoId
-//     ? ROUTE_KEYS.REPO_TICKET_CREATE
-//     : projId
-//       ? ROUTE_KEYS.PROJ_TICKET_CREATE
-//       : ROUTE_KEYS.TICKET_CREATE;
-
-//   const isRepoScoped = !!repoId;
-//   const normalizeTicket = (ticket) => ({
-//     id: ticket.Issue_Id,
-//     title: ticket.Title,
-//     ticketKey: ticket.Issue_Code,
-//     statusId: ticket.StatusId,
-//     description: ticket.HtmlDesc || ticket.Description,
-//     assginedTo: ticket.Assignee_Id,
-//     estimateHours: ticket.hours,
-//     createdAt: ticket.CreatedAt,
-//     updatedAt: ticket.UpdatedAt,
-//     UpdatedBy: ticket.UpdatedBy,
-//     repoId: ticket.RepoId,
-//     dueDate: ticket.Due_Date,
-//     project: ticket.Project_Id,
-//     priority: ticket.Priority,
-//     multiAssignees: ticket.All_Assignees
-//       ? JSON.parse(ticket.All_Assignees)
-//       : [],
-//     RepoKey: ticket.RepoKey,
-//     label: ticket.Labels_JSON ? JSON.parse(ticket.Labels_JSON) : [],
-//     teamId: ticket.Assignee_TeamId,
-//     teamName: ticket.Assignee_TeamName,
-//     CompletionPct: ticket.CompletionPct,
-//   });
-//   const employeeFilterOptions = [
-//     { label: "All Employees", value: "" },
-//     ...(Master?.EmployeeList?.map((user) => ({
-//       label: user.UserName,
-//       value: user.UserID,
-
-//     })) || []),
-//   ];
-
-//   const repoFilterOptions = [
-//     { label: " Repositories", value: "" },
-//     ...(Master?.RepoList?.map((repo) => ({
-//       label: repo.Title, // What the user sees in the dropdown
-//       value: repo.Repo_Id, // What the system uses to filter the cards
-//     })) || []),
-//   ];
-//   const projectFilterOptions = [
-//     { label: "Projects", value: "" },
-//     ...(Master?.ProjectList?.map((prj) => ({
-//       label: prj.Project_Name, // What the user sees in the dropdown
-//       value: prj.Id, // What the system uses to filter the cards
-//     })) || []),
-//   ];
-
-//   const LabelFilterOptions = [
-//     { label: " Labels", value: "" },
-//     ...(Master?.LabelMaster?.map((labels) => ({
-//       label: labels.Title, // What the user sees in the dropdown
-//       value: labels.Id, // What the system uses to filter the cards
-//     })) || []),
-//   ];
-
-//   const teamFilterOptions = [
-//     { label: "All Teams", value: "" },
-//     ...Array.from(new Set(
-//       data
-//         ?.map(ticket => ticket.Assignee_TeamName)
-//         .filter(team => team) // Remove null/undefined
-//     ))
-//     .map(teamName => ({
-//       label: teamName,
-//       value: teamName  // Filter by exact team name string
-//     }))
-//     .sort((a, b) => a.label.localeCompare(b.label)) || []
-//   ];
-
-//   const TicketList = data?.map(normalizeTicket) || [];
-
-//   // const focusedIndex = useTicketKeyboardNavigation(
-//   //   TicketList,
-//   //   (item) => navigate(`${location.pathname}/${item.id}`),
-//   //   (item) => goTo(editRouteKey, { ticketId: item.id, repoId, projId }),
-//   // );
-//   const listConfigWithNav = {
-//     ...TicketListConfig,
-//     filters: [
-//       ...(!repoId
-//         ? [
-//             {
-//               key: "repoId",
-//               view: "Repo",
-//               options: repoFilterOptions,
-//             },
-//           ]
-//         : []),
-//       {
-//         key: "assginedTo",
-//         view: "Assignee",
-//         options: employeeFilterOptions,
-//         filterType: "custom",
-//         customFilter: (item, selectedValue) => {
-//           if (!selectedValue) return true; // If nothing is selected, don't filter it out
-
-//           // 1. Convert the selected dropdown value to lowercase safely
-//           const safeSelected = String(selectedValue).toLowerCase();
-
-//           // 2. Check primary assignee (also converted to lowercase)
-//           // (Assuming item.assginedTo holds the Name or ID)
-//           if (
-//             item.assginedTo &&
-//             String(item.assginedTo).toLowerCase() === safeSelected
-//           ) {
-//             return true;
-//           }
-
-//           // 3. Check multiAssignees array
-//           if (Array.isArray(item.multiAssignees)) {
-//             return item.multiAssignees.some((assignee) => {
-//               // Convert both Name and Id to lowercase before comparing
-//               const matchName =
-//                 assignee.Assignee_Name &&
-//                 String(assignee.Assignee_Name).toLowerCase() === safeSelected;
-//               const matchId =
-//                 assignee.Assignee_Id &&
-//                 String(assignee.Assignee_Id).toLowerCase() === safeSelected;
-
-//               return matchName || matchId;
-//             });
-//           }
-
-//           return false; // No match found
-//         },
-//       },
-//       {
-//         key: "project", // 👈 MUST match the 'owner' key in normalizeProj
-//         view: "Project",
-//         options: projectFilterOptions,
-//       },
-//       {
-//         key: "label", // 👈 MUST match the 'owner' key in normalizeProj
-//         view: "Label",
-//         options: LabelFilterOptions,
-//         filterType: "array",
-//         filterKey: "LABEL_ID", // Because label is an array of objects, we need to specify which key to filter on
-//       },
-//       {
-//         key: "teamName",  // 👈 MUST match normalizeTicket key
-//         view: "Team",
-//         options: teamFilterOptions,
-//       },
-//     ],
-//     cardRenderer: (item, controls) => (
-//       <TicketListCard
-//         item={item}
-//         controls={controls}
-//         // focused={index === focusedIndex}
-//       />
-//     ),
-//     onItemClick: (item) => {
-//       const createRouteKey = ROUTE_KEYS.TICKET_DETAIL;
-//       goTo(createRouteKey, { ticketId: item.id });
-//     },
-//     onEditClick: (item) => {
-//       goTo(editRouteKey, { ticketId: item.id, repoId, projId });
-//     },
-//   };
-
-//   return (
-//     <>
-//       {/* <h3>{isRepoScoped ? `Tickets for Repo ${repoId}` : "All Tickets"}</h3> */}
-
-//       {/* 🔥 Create Button */}
-//       {/* <button onClick={handleCreate}>Create Ticket</button> */}
-//       {!repoId && !projId && (
-//         <div className="flex justify-between items-center mb-4 flex-none px-2">
-//           <h2 className="text-2xl font-bold text-gray-800">Tickets</h2>
-
-//           <button
-//             onClick={() => goTo(createRouteKey, { repoId, projId })}
-//             className="bg-brand-yellow text-white px-4 py-2 rounded-md font-medium hover:bg-yellow-500 transition-colors"
-//           >
-//             Create New Tickets
-//           </button>
-//         </div>
-//       )}
-
-//       {/* <div className="tickets-container container"> */}
-//       <div className="w-full pb-10">
-//         <ListProvider config={listConfigWithNav} data={TicketList}>
-//           <ListLayout />
-//         </ListProvider>
-//       </div>
-//       {/* </div> */}
-//     </>
-//   );
-// }
-
-// //anbu
-
 import { useParams } from "react-router-dom";
-import React from "react";
+import React, { useMemo } from "react";
 import { useTicketMaster } from "../hooks/useTicketMaster";
 import "../css/ViewTickets.css";
 import { ListProvider } from "../../../packages/ui-List/components/ListProvider";
@@ -236,7 +7,6 @@ import { ListLayout } from "../../../packages/ui-List/components/ListLayout";
 import { TicketListConfig } from "../config/TicketUI.config";
 import { ROUTE_KEYS } from "../../../core/routing/paths";
 import { useSmartNavigation } from "../../../core/navigation/useSmartNavigation";
-import TicketListCard from "../component/TicketListCard";
 import { normalizeTicket } from "../../../app/shared/utils/normalizer";
 import {
   useEmployeeOptions,
@@ -245,24 +15,32 @@ import {
   useRepoOptions,
   useTeamOptions,
 } from "../../../core/master/selectors/selectors";
-import { readUserFromSession, useCurrentUser } from "../../../core/auth/useCurrentUser";
+import {
+  readUserFromSession,
+  useCurrentUser,
+} from "../../../core/auth/useCurrentUser";
+import { TicketsHeader } from "./TicketsHeader";
 
 export default function TicketsPage() {
   const { repoId, projId } = useParams();
-  // const { data: Master } = useMasterData();
   const activeProjectId = projId;
   const { goTo } = useSmartNavigation();
   const { isViewer } = useCurrentUser();
+
   const { data } = useTicketMaster({
     repoId: repoId ?? null,
     projectId: activeProjectId ?? null,
   });
+
   const projectFilterOptions = useProjectOptions(true);
-  const LabelFilterOptions = useLabelOptions(true);
+  const labelFilterOptions = useLabelOptions(true);
   const employeeFilterOptions = useEmployeeOptions(true);
   const repoFilterOptions = useRepoOptions(true);
   const teamFilterOptions = useTeamOptions(true);
+
   const currentUser = readUserFromSession();
+  const currentUserId =
+    currentUser?.id ?? currentUser?.userId ?? currentUser?.UserId ?? null;
 
   const editRouteKey = projId
     ? ROUTE_KEYS.PROJ_TICKET_EDIT
@@ -274,13 +52,38 @@ export default function TicketsPage() {
       ? ROUTE_KEYS.PROJ_TICKET_CREATE
       : ROUTE_KEYS.TICKET_CREATE;
 
-  const TicketList = data?.map(normalizeTicket) || [];
+  const isAllowedToView = (item, userId) => {
+    if (Number(item?.statusId) !== 19) return true;
+    if (!userId) return false;
 
-  // const focusedIndex = useTicketKeyboardNavigation(
-  //   TicketList,
-  //   (item) => navigate(`${location.pathname}/${item.id}`),
-  //   (item) => goTo(editRouteKey, { ticketId: item.id, repoId, projId }),
-  // );
+    const normalizedUserId = String(userId).toLowerCase().trim();
+
+    const assignedTo = String(item?.assignedTo ?? "")
+      .toLowerCase()
+      .trim();
+    if (assignedTo && assignedTo === normalizedUserId) return true;
+
+    if (Array.isArray(item?.multiAssignees)) {
+      return item.multiAssignees.some((assignee) => {
+        const assigneeId = String(assignee?.Assignee_Id ?? "")
+          .toLowerCase()
+          .trim();
+        const assigneeName = String(assignee?.Assignee_Name ?? "")
+          .toLowerCase()
+          .trim();
+        return (
+          assigneeId === normalizedUserId || assigneeName === normalizedUserId
+        );
+      });
+    }
+
+    return false;
+  };
+
+  const ticketList = useMemo(() => {
+    const rawList = (data ?? []).map(normalizeTicket);
+    return rawList.filter((item) => isAllowedToView(item, currentUserId));
+  }, [data, currentUserId]);
 
   const listConfigWithNav = {
     ...TicketListConfig(isViewer),
@@ -289,22 +92,25 @@ export default function TicketsPage() {
     filters: [
       ...(!repoId
         ? [
-          {
-            key: "repoId",
-            view: "Repo",
-            allowMultiple: true,
-            showCounts: true,
-            allowedRoles: [1, 2],
-            options: repoFilterOptions,
-          },
-        ]
+            {
+              key: "repoId",
+              view: "Repo",
+              allowMultiple: true,
+              showCounts: true,
+              allowedRoles: [1, 2],
+              options: repoFilterOptions,
+            },
+          ]
         : []),
 
       {
         key: "assginedTo",
         view: "owner",
         allowedRoles: [1, 2],
-        options: [...useEmployeeOptions(true, "Owner"),{label:"No Owner",value:"__no_owner__"},],
+        options: [
+          ...useEmployeeOptions(true, "Owner"),
+          { label: "No Owner", value: "__no_owner__" },
+        ],
         filterType: "custom",
         allowMultiple: true,
         showCounts: true,
@@ -315,61 +121,64 @@ export default function TicketsPage() {
           ) {
             return true;
           }
-        
+
           const selectedValues = Array.isArray(selectedValue)
             ? selectedValue
-            : String(selectedValue).split(",").map(v => v.trim());
-        
+            : String(selectedValue)
+                .split(",")
+                .map((v) => v.trim());
+
           return selectedValues.some((val) => {
             const assignedTo = item.assignedTo
               ? String(item.assignedTo).toLowerCase()
               : "";
-        
             const safeVal = String(val).toLowerCase();
-        
-            // ✅ special case: "no owner"
+
             if (safeVal === "__no_owner__") {
               return !item.assignedTo || item.assignedTo === "";
             }
-        
-            // normal match
+
             return assignedTo === safeVal;
           });
-        }
+        },
       },
+
       {
         key: "multiAssignees",
         view: "Assignee",
         allowedRoles: [1, 2],
-        options: useEmployeeOptions(true, "Assignee"),
+        options: employeeFilterOptions,
         filterType: "custom",
         allowMultiple: true,
         showCounts: true,
         customFilter: (item, selectedValues) => {
           if (!selectedValues || selectedValues.length === 0) return true;
-          // normalize into array
+
           const values = Array.isArray(selectedValues)
             ? selectedValues.map((v) => String(v).toLowerCase())
             : [String(selectedValues).toLowerCase()];
+
           if (Array.isArray(item.multiAssignees)) {
             return item.multiAssignees.some((assignee) => {
               if (assignee.Assignee_Type === "Main Assignee") return false;
-        
+
               const assigneeName = String(
                 assignee.Assignee_Name || "",
               ).toLowerCase();
-        
               const assigneeId = String(
                 assignee.Assignee_Id || "",
               ).toLowerCase();
-        
-              return values.includes(assigneeName) || values.includes(assigneeId);
+
+              return (
+                values.includes(assigneeName) || values.includes(assigneeId)
+              );
             });
           }
-        
+
           return false;
         },
       },
+
       {
         key: "customBoolean",
         view: "Special Flags",
@@ -393,36 +202,46 @@ export default function TicketsPage() {
                 .split(",")
                 .map((v) => v.trim())
                 .filter(Boolean);
-      
-          const flagFields = ["isCloseRequested", "priorityRequest", "funcResponse", "webResponse", "technicalResponse", "adminResponse"];
-      
+
+          const flagFields = [
+            "isCloseRequested",
+            "priorityRequest",
+            "funcResponse",
+            "webResponse",
+            "technicalResponse",
+            "adminResponse",
+          ];
+
           if (values.includes("allFlags")) {
             return flagFields.some((field) => item[field] === true);
           }
-      
+
           if (values.length === 0) return true;
-      
+
           return values.some((field) => item[field] === true);
         },
       },
+
       {
-        key: "project", // 👈 MUST match the 'owner' key in normalizeProj
+        key: "project",
         view: "Project",
         allowedRoles: [1, 2, 3],
         allowMultiple: true,
         showCounts: true,
         options: projectFilterOptions,
       },
+
       {
-        key: "label", // 👈 MUST match the 'owner' key in normalizeProj
+        key: "label",
         view: "Label",
         allowedRoles: [1, 2, 3],
         showCounts: true,
-        options: LabelFilterOptions,
+        options: labelFilterOptions,
         filterType: "array",
         allowMultiple: true,
-        filterKey: "LABEL_ID", // Because label is an array of objects, we need to specify which key to filter on
+        filterKey: "LABEL_ID",
       },
+
       {
         key: "teamId",
         view: "Team",
@@ -433,7 +252,7 @@ export default function TicketsPage() {
         allowMultiple: true,
         customFilter: (item, value) => {
           if (!value || value === "") return true;
-          // Check if ANY assignee on this ticket belongs to the selected team
+
           return item.multiAssignees?.some(
             (a) =>
               String(a.Assignee_TeamId) === String(value) &&
@@ -442,16 +261,8 @@ export default function TicketsPage() {
         },
       },
     ],
-    // cardRenderer: (item, controls) => (
-    //   <TicketListCard
-    //     item={item}
-    //     controls={controls}
-    //     // focused={index === focusedIndex}
-    //   />
-    // ),
     onItemClick: (item) => {
-      const createRouteKey = ROUTE_KEYS.TICKET_DETAIL;
-      goTo(createRouteKey, { ticketId: item.id });
+      goTo(ROUTE_KEYS.TICKET_DETAIL, { ticketId: item.id });
     },
     onEditClick: (item) => {
       goTo(editRouteKey, { ticketId: item.id, repoId, projId });
@@ -460,11 +271,7 @@ export default function TicketsPage() {
 
   return (
     <>
-      {/* <h3>{isRepoScoped ? `Tickets for Repo ${repoId}` : "All Tickets"}</h3> */}
-
-      {/* 🔥 Create Button */}
-      {/* <button onClick={handleCreate}>Create Ticket</button> */}
-      {!repoId && !projId && (
+      {/* {!repoId && !projId && (
         <div className="flex justify-between items-center mb-4 flex-none px-2">
           <h2 className="text-2xl font-bold text-gray-800">Tickets</h2>
 
@@ -475,15 +282,22 @@ export default function TicketsPage() {
             Create New Tickets
           </button>
         </div>
-      )}
+      )} */}
 
-      {/* <div className="tickets-container container"> */}
       <div className="w-full pb-10">
-        <ListProvider config={listConfigWithNav} data={TicketList} userRole={currentUser?.role}>
+        <ListProvider
+          config={listConfigWithNav}
+          data={ticketList}
+          userRole={currentUser?.role}
+        >
+          {!repoId && !projId && (
+            <TicketsHeader
+              onCreate={() => goTo(createRouteKey, { repoId, projId })}
+            />
+          )}
           <ListLayout />
         </ListProvider>
       </div>
-      {/* </div> */}
     </>
   );
 }
